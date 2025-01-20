@@ -1,10 +1,12 @@
 name: Déployer sur App Runner
 
+# Déclenchement du workflow lors d'un push sur la branche main ou manuellement
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+# Jobs du workflow
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,12 +14,15 @@ jobs:
       id-token: write
       contents: read
 
+    # Etapes du job
     steps:
+      # Récupération du code source
       - name: Checkout du code
         uses: actions/checkout@v2
         with:
           persist-credentials: false
 
+      # Configuration des identifiants AWS
       - name: Configuration des identifiants AWS
         id: aws-credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -25,10 +30,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # Connexion à Amazon ECR (Elastic Container Registry)
       - name: Connexion à Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      # Construction et push de l'image Docker
       - name: Construction et push de l'image Docker
         id: build-image
         env:
@@ -40,6 +47,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
+      # Déploiement sur App Runner
       - name: Déploiement sur App Runner
         id: deploy-apprunner
         uses: awslabs/amazon-app-runner-deploy@main
@@ -52,5 +60,6 @@ jobs:
           memory: 2
           wait-for-service-stability-seconds: 600
 
+      # Affichage de l'URL du service App Runner
       - name: URL du service App Runner
         run: echo "URL du service App Runner : ${{ steps.deploy-apprunner.outputs.service-url }}"
